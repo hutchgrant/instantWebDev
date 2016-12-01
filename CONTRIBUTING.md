@@ -12,8 +12,8 @@ The following is expected from any pull requests.
    git clone https://github.com/<your-username>/site.git
    # change directory to the repository folder
    cd site
-   # set the official CheckoutCrypto site repo to a remote branch called "upstream"
-   git remote add upstream https://github.com/checkoutcrypto/site.git
+   # set the official instantWebDev repo to a remote branch called "upstream"
+   git remote add upstream https://github.com/hutchgrant/instantWebDev.git
    ```
 
 2. If you cloned a while ago, make sure to update with the latest changes from upstream branch:
