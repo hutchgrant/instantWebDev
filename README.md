@@ -2,7 +2,7 @@
 
 Instantly create a new drupal/wordpress LAMP dev environment for local sites/multisites
 
-The goal is to give anyone with a Debian based linux machine an instant LAMP server with drush, wp-cli, and the ability to quickly add Drupal/Wordpress sites/multisites without any additional configuration.
+The goal is to give anyone with a Debian based linux machine an instant LAMP server with drush, wp-cli, and the ability to quickly add Drupal/Wordpress sites/multisites without any additional configuration. In addition to deploying local sites it also gives the user access to a few common administration tools.
 
 ## Prerequisites
 
@@ -20,6 +20,25 @@ git clone https://github.com/hutchgrant/instantWebDev.git
 cd ./instantWebDev
 chmod +x ./instantWebDev
 ```
+
+Run with:
+```
+./instantWebDev
+```
+
+you may also wish to make it executable from anywhere
+
+```
+sudo cp ./instantWebDev /usr/bin/
+```
+
+then simply:
+
+```
+instantWebDev
+```
+
+## Local Environment Setup
 
 If you already have apache installed:
 
@@ -44,24 +63,42 @@ Pass="password"
 Email="admin@example.com"
 ```
 
-Run with:
-```
-./instantWebDev
-```
-
-you may also wish to make it executable from anywhere
+## Remote Environment Setup
 
 ```
-sudo cp ./instantWebDev /usr/bin/
+nano ./instantWebDev
 ```
 
-then simply:
+Edit, save and exit:
 
 ```
-instantWebDev
+arr[1,'site']="example.com"		    # Remote Site Name
+arr[1,'ssh']="root@8.8.8.8"	            # SSH user@ipaddress
+arr[1,'locMnt']="/home/user/sites/example"  # Local Folder for mounting your site
+arr[1,'remMnt']="/var/www/example"          # Remote apache folder where the site is located
+
+optional:
+
+arr[1,'multisite']="example-multi.com"      # multisite directory name for drush to update, if no default site, otherwise delete line
 ```
 
-## Example Drupal Automated Installation
+## Basic Admin/Setup Menu Options:
+
+```
+------------------------------------------------
+Instant Drupal/Wordpress Development Environment
+---------------by hutchgrant--------------------
+------------------------------------------------
+1) Mount Site
+2) Dismount Site
+3) SSH site
+4) Update All Remote
+5) Update All Local
+6) Add new local Drupal/Wordpress single/multi site
+7) Exit
+```
+
+## Example Local Drupal Automated Installation
 
 ```
 ------------------------------------------------
@@ -108,7 +145,7 @@ instantWebDev is available under the [Apache 2.0 License](https://github.com/hut
 ## Contributing
 
 All contributions will be placed under the same Apache 2.0 license, contributers must agree to that license.
-More information on [contributing.md](https://github.com/hutchgrant/instantWebDev/blob/master/CONTRIBUTING.md)
+For more information see [contributing](https://github.com/hutchgrant/instantWebDev/blob/master/CONTRIBUTING.md).
 
 ## Creator
 
