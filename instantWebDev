@@ -1,6 +1,10 @@
 #!/bin/bash
 clear
 
+# instantWebDev is released under the apache v2.0 License http://www.apache.org/licenses/LICENSE-2.0
+# Created By: Grant Hutchinson(hutchgrant)
+# github.com/hutchgrant/instantWebDev
+
 # -------------------------------------------#
 #         REMOTE DRUPAL SITES INFO
 # -------------------------------------------#
@@ -42,6 +46,31 @@ srvUrl="http://localhost/~$USER"
 base="/~$USER"
 
 localDrushAlias="local"
+
+# ------------------------------------------#
+# -------- Custom Default Themes -----------#
+# ------------------------------------------#
+author="$USER"
+
+# Drupal Themes
+declare -A druptheme
+druptheme[1,'name']="Bootstrap 3"		    		   # Drupal Theme Name -exact dl name
+druptheme[1,'desc']="Bootstrap 3 Base Theme"	    		   # Drupal Theme Description
+
+drupthemeCount=1  # EDIT adjust for number of drupal themes you add.
+
+# Wordpress Themes
+declare -A wordtheme
+wordtheme[1,'name']="bst				"	             # Wordpress Theme Name -exact dl name
+wordtheme[1,'desc']="Bootstrap 3 Starter Theme by SimonPadbury"	             # Wordpress Theme Description
+wordtheme[1,'url']="https://github.com/SimonPadbury/bst/archive/master.zip"  # URL to download from
+
+wordtheme[2,'name']="b4st"					             # Wordpress Theme Name -exact dl name
+wordtheme[2,'desc']="Bootstrap 4-alpha Starter Theme by SimonPadbury"	     # Wordpress Theme Description
+wordtheme[2,'url']="https://github.com/SimonPadbury/b4st/archive/master.zip" # URL to download from
+
+wordthemeCount=2 # EDIT adjust for number of wordpress themes you add.
+
 
 
 # Check if apache mod_rewrite is enabled
@@ -302,6 +331,145 @@ EOF
 done
 }
 
+# Check for less
+checkLess () {
+
+if ! [ -x "$(command -v lessc)" ]; then
+	echo "Less is missing, atempting to install Less"
+	sudo apt-get install less -y
+fi
+
+}
+
+# Install New Bootstrap Base Theme
+installDrupTheme () {
+
+checkLess
+# Get bootstrap default theme + start kit, create new theme
+drush @local.$newsite en bootstrap -y
+cp $srvRoot/$newsite/themes/bootstrap/starterkits/less $srvRoot/$newsite/themes/$themename -R
+find $srvRoot/$newsite/themes/$themename/ -name "THEMENAME*" -exec rename "s/THEMENAME/$themename/" '{}' \;
+mv $srvRoot/$newsite/themes/$themename/$themename.starterkit.yml $srvRoot/$newsite/themes/$themename/$themename.info.yml 
+find $srvRoot/$newsite/themes/$themename/ -exec sed -i "s/THEMENAME/$themename/g" '{}' \;
+
+# Get bootstrap source
+wget https://github.com/twbs/bootstrap/archive/v3.3.7.zip -P $srvRoot/$newsite/themes/
+unzip $srvRoot/$newsite/themes/v3.3.7.zip -d $srvRoot/$newsite/themes/$themename/
+mv $srvRoot/$newsite/themes/$themename/bootstrap-3.3.7 $srvRoot/$newsite/themes/$themename/bootstrap
+rm $srvRoot/$newsite/themes/v3.3.7.zip
+
+lessc $srvRoot/$newsite/themes/$themename/less/style.less $srvRoot/$newsite/themes/$themename/css/style.css
+
+echo "enable on a specific multisite? [y/n]"
+read multisite
+
+
+if [ $multisite == "y" ]; then
+echo "Which sub-site of this multisite do you want to enable the theme on?"
+read specmulti
+
+drush @local.$newsite -l $specmulti pm-uninstall bartik
+drush @local.$newsite -l $specmulti pm-enable $themename -y
+drush @local.$newsite -l $specmulti config-set system.theme default $themename -y
+drush @local.$newsite -l cache-rebuild
+else
+drush @local.$newsite pm-uninstall bartik
+drush @local.$newsite pm-enable $themename -y
+drush @local.$newsite config-set system.theme default $themename -y
+drush @local.$newsite cache-rebuild
+fi
+
+}
+
+# Install New Wordpress base Theme
+installWordTheme () {
+wp theme install ${wordtheme[$themechoice,'url']} --path=$srvRoot/$newsite
+
+cp $srvRoot/$newsite/wp-content/themes/${wordtheme[$themechoice,'name']} $srvRoot/$newsite/wp-content/themes/$themename -R
+rm $srvRoot/$newsite/wp-content/themes/${wordtheme[$themechoice,'name']} -R
+
+echo -e "/*
+Theme Name: $themename 
+Theme URI: http://$author.com 
+Description: Bootstrap Starter Theme for WordPress. Using Twitter Bootstrap 3.3.5
+Author: $author
+Author URI: http://$author.github.io
+Version: 2.7.1
+License: MIT License
+License URI: http://opensource.org/licenses/MIT 
+*/ \n" > $srvRoot/$newsite/wp-content/themes/$themename/style.css
+
+echo "Activate theme immediately on this site? [y/n]"
+read themeactive
+
+echo "Enable theme for all sites on a multisite? [y/n]"
+read thememulti
+
+if [ $themeactive == "y" ]; then
+if [ $thememulti == "y" ]; then
+wp theme enable $themename --path=$srvRoot/$newsite --activate --network
+else
+wp theme activate $themename --path=$srvRoot/$newsite
+fi
+fi
+}
+
+# List Drupal Themes
+drupThemeList () {
+for (( i=1; i<=$drupthemeCount; i++))
+do
+  echo "$i) ${druptheme[$i,'desc']}"
+done
+read themechoice
+}
+
+# List Wordpress Themes
+wordThemeList () {
+for (( i=1; i<=$wordthemeCount; i++))
+do
+  echo "$i) ${wordtheme[$i,'desc']}"
+done
+read themechoice
+}
+
+# Display New Drupal Theme Menu
+drupThemeMenu () {
+echo "Do you want to create a new theme? [y/n]"
+read newtheme
+
+if [ $newtheme == "y" ]; then
+echo "Which theme do you want to use as a base?"
+drupThemeList
+
+echo "What do you want to name the new custom theme?"
+read themename
+
+case $themechoice in
+
+1)
+installDrupTheme
+;;
+esac
+fi
+
+}
+
+# Display New Wordpress Theme Menu
+wordThemeMenu () {
+echo "Do you want to create a new theme? [y/n]"
+read newtheme
+
+if [ $newtheme == "y" ]; then
+echo "Which theme do you want to use as a base?"
+wordThemeList
+
+echo "What do you want to name the new custom theme?"
+read themename
+
+installWordTheme
+fi
+}
+
 # Display list of sites available
 getSiteMenu () {
 for (( i=1; i<=$count; i++))
@@ -340,7 +508,7 @@ case $choice in
 	fi
 	if ! [ -x "$(command -v sshfs)" ]; then
 	  echo "Missing sshfs, attempting to install."
-          sudo apt-get install sshfs
+          sudo apt-get install sshfs -y
 	fi
 	sshfs -o IdentityFile=~/.ssh/id_rsa ${arr[$submenu,'ssh']}:/ ${arr[$submenu,'locMnt']}
 	Exit=1
@@ -391,6 +559,7 @@ case $cms in
 	singleDrupal
 	fi 
 	modifyApache
+	drupThemeMenu
 	openSite
      ;;
      2)
@@ -402,6 +571,7 @@ case $cms in
 	singleWP
 	fi 
 	modifyApache
+	wordThemeMenu
 	openSite
      ;;
 esac
