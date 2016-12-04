@@ -1,6 +1,31 @@
 #!/bin/bash
 clear
 
+# -------------------------------------------#
+#         REMOTE DRUPAL SITES INFO
+# -------------------------------------------#
+# ADD/EDIT WITH YOUR REMOTE SITES
+declare -A arr
+arr[1,'site']="example.com"		    # Remote Site Name
+arr[1,'ssh']="root@8.8.8.8"	            # SSH user@ipaddress
+arr[1,'locMnt']="/home/user/sites/example"  # Local Folder for mounting your site
+arr[1,'remMnt']="/var/www/example"          # Remote apache folder where the site is located
+arr[1,'multisite']="example-multi.com"      # multisite directory name for drush to update, if no default site
+
+arr[2,'site']="example2.com"
+arr[2,'ssh']="root@8.8.8.8"
+arr[2,'locMnt']="/home/user/sites/example2"
+arr[2,'remMnt']="/var/www/example2"
+
+arr[3,'site']="example3.com"
+arr[3,'ssh']="root@8.8.8.8"
+arr[3,'locMnt']="/home/user/sites/example3"
+arr[3,'remMnt']="/var/www/example3"
+
+count=3  # EDIT adjust for number of remote sites you add. Multidimensional, difficulty ascertaining size automatically
+# -------------------------------------------#
+#  LOCAL DRUPAL/WORDPRESS CREATE SITE INFO
+# -------------------------------------------#
 # EDIT WITH YOUR MYSQL CREDENTIALS
 db_user="root"
 db_pass="password"
@@ -9,12 +34,14 @@ db_url="localhost"
 # EDIT WITH YOUR PREFERRED DRUPAL/WORDPRESS DEFAULT ADMIN CREDENTIALS
 Usr="admin"
 Pass="password"
-Email="admin@example.com"
+Email="example@example.com"
 
 # FOR CUSTOM PATHS, EDIT THESE
 srvRoot="/home/$USER/public_html"
 srvUrl="http://localhost/~$USER"
 base="/~$USER"
+
+localDrushAlias="local"
 
 
 # Check if apache mod_rewrite is enabled
@@ -54,7 +81,7 @@ then
     echo "----REMINDER: You will be asked to create and then re-enter a mysql password----"
     echo "------------- Make sure you write it down, you will need to manually edit -----"
     echo "--------------the top of this script with it after it's completed or it -------"
-    echo "--------------will not work!  -------------------------------------------------"
+    echo "--------------will not work!---------------------------------------------------"
     echo "-------------------------------------------------------------------------------"
     read -p "Press any key to continue..." 
     sudo apt-get -y install mysql-server mysql-client libmysqld-dev;
@@ -70,7 +97,7 @@ then
     echo "-------------------------------------------------------------------------------"
     echo "To continue installing your first site, we need the mysql password, it's recommended you manually edit it into the top of this script, along with other credentials you want to add, then save it. rerun this script afterwords when completed".
     echo "---------------------------------------------------------------------------------"
-    read -p "Press any key to continue..." 
+    read -p "Press any key to continue..."
     gedit ./instantWebDev
     exit
 else
@@ -258,13 +285,90 @@ getMultiName () {
 	read baseSite
 }
 
+# Update all Remote Drupal Installations
+updateRemDrupal () {
+for (( i=1; i<=$count; i++))
+do
+  ssh ${arr[$i,'ssh']} << EOF
+   apt-get -y upgrade
+   cd ${arr[$i,'remMnt']}
+   if [ -n "${arr[$i,'multisite']}" ]; then
+   drush -l ${arr[$i,'multisite']} pm-update -y
+   else
+   drush pm-update -y
+   fi
+   exit
+EOF
+done
+}
+
+# Display list of sites available
+getSiteMenu () {
+for (( i=1; i<=$count; i++))
+do
+  echo "$i) ${arr[$i,'site']}"
+done
+read submenu
+}
+
+# Display and control Main Menu
+getMainMenu() {
+Exit=0
+until [ $Exit -eq 1 ]; do
 echo "------------------------------------------------"
 echo "Instant Drupal/Wordpress Development Environment"
 echo "---------------by hutchgrant--------------------"
 echo "------------------------------------------------"
+echo "1) Mount Site"
+echo "2) Dismount Site"
+echo "3) SSH site"
+echo "4) Update All Remote"
+echo "5) Update All Local"
+echo "6) Add new local Drupal/Wordpress single/multi site"
+echo "7) Exit"
+read choice
 
+case $choice in
+1)
+	getSiteMenu
+	if [ ! -d "${arr[$submenu,'locMnt']}" ]; then
+	echo "The directory you specified to mount the remote site to doesn't exist, Do you wish to create it? [y/n]"
+	read missing
+	   if [ $missing == 'y']; then
+	   mkdir ${arr[$submenu,'locMnt']}
+	   fi
+	fi
+	if ! [ -x "$(command -v sshfs)" ]; then
+	  echo "Missing sshfs, attempting to install."
+          sudo apt-get install sshfs
+	fi
+	sshfs -o IdentityFile=~/.ssh/id_rsa ${arr[$submenu,'ssh']}:/ ${arr[$submenu,'locMnt']}
+	Exit=1
+;;
+2)
+	getSiteMenu
+	sudo umount ${arr[$submenu,'locMnt']}
+	Exit=1
+;;
+3)
+	getSiteMenu
+	ssh ${arr[$submenu,'ssh']}
+;;
+4)  updateRemDrupal
+;;
+5) drush @$localDrushAlias pm-update
+;;
+6) getCMSMenu
+;;
+7) Exit=1
+;;
+esac
+done
+}
+
+# Display and control add new CMS Menu
+getCMSMenu() {
 checkLAMP
-
 echo "Which CMS do you want to use?"
 echo "1) Drupal"
 echo "2) Wordpress"
@@ -301,6 +405,6 @@ case $cms in
 	openSite
      ;;
 esac
+}
 
-
-
+getMainMenu
