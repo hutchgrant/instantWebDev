@@ -368,10 +368,10 @@ if [ $multisite == "y" ]; then
 echo "Which sub-site of this multisite do you want to enable the theme on?"
 read specmulti
 
-drush @local.$newsite -l $specmulti pm-uninstall bartik
-drush @local.$newsite -l $specmulti pm-enable $themename -y
-drush @local.$newsite -l $specmulti config-set system.theme default $themename -y
-drush @local.$newsite -l cache-rebuild
+drush @local.$baseSite -l $specmulti pm-uninstall bartik
+drush @local.$baseSite -l $specmulti pm-enable $themename -y
+drush @local.$baseSite -l $specmulti config-set system.theme default $themename -y
+drush @local.$baseSite -l $specmulti cache-rebuild
 else
 drush @local.$newsite pm-uninstall bartik
 drush @local.$newsite pm-enable $themename -y
